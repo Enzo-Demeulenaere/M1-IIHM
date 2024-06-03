@@ -1,0 +1,226 @@
+---
+title: "Rapport"
+output: html_document
+date: "`r Sys.Date()`"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Importation des données
+
+```{r}
+
+data <- read.csv2("../results2.csv",sep=";",dec=".")
+
+
+data$userID <- factor(data$userID)
+data$technique <- factor(data$technique)
+data$density <- factor(data$density)
+data$targetSize <- factor(data$targetSize)
+data$targetNumber <- factor(data$targetNumber)
+data$time <- factor(data$time)
+data$nbErrors <- factor(data$nbErrors)
+data$nbRepeat <- factor(data$nbRepeat)
+
+length(data$userID)
+length(data$technique)
+length(data$density)
+length(data$targetSize)
+length(data$targetNumber)
+length(data$time)
+length(data$nbErrors)
+length(data$nbRepeat)
+```
+
+Nous vérifions bien que chaque colonne possède le bon nombre de données.
+
+Filtrons les lignes où il n'y a pas d'erreurs.
+
+```{r}
+dataClean <- subset(data, nbErrors == 0)
+length(dataClean$nbErrors)
+
+dataClean$userID <- factor(dataClean$userID)
+dataClean$technique <- factor(dataClean$technique)
+dataClean$density <- factor(dataClean$density)
+dataClean$targetSize <- factor(dataClean$targetSize)
+dataClean$targetNumber <- factor(dataClean$targetNumber)
+dataClean$time <- factor(dataClean$time)
+dataClean$nbErrors <- factor(dataClean$nbErrors)
+``` 
+Nous avions donc 96 lignes pour lesquelles au moins une erreur a été produite par un participant de l'experience, nous travaillons donc désormais uniquement sur les cibles selectionnées sans erreur
+
+## Graphiques et Résultats
+
+Pour rappel, notre expérience demander de cliquer sur 15 cibles pour chaque technique ("Normal", "Bubble" et "Rope"), pour 2 densités différentes (30 et 90 cibles), pour 2 tailles de cibles différentes (9 et 18 pixels), chaque participant faisait 2 répétitions de chaque combinaison. Nous avons recueilli les données de 5 participants.
+
+Observons en premier lieu le temps de réponse entre chaque participant
+
+```{r}
+library(dplyr)
+library(ggplot2)
+
+data.bars2 <- dataClean %>%
+  group_by(userID) %>%
+  summarise(mean.time = mean(as.numeric(time)), .groups = 'drop')
+
+g.bars2 <- ggplot(data = data.bars2, aes(x=userID, y = mean.time)) + geom_col(position = "dodge")
+
+g.bars2
+```
+
+Nous observons clairement que chaque participant a un temps de réponse moyen différent, certains sont plus rapides que d'autres, cela peut s'expliquer par les temps de réaction différents de chacun mais également la capacité a repérer plus ou moins vite la nouvelle cible à selectionner.
+
+Y aurait-il un effet de fatigue ou au contraire d'apprentissage entre 2 répétitions ?
+
+Rappelons que les 2 répétitions d'une combinaison ne s'effectuent pas l'une à la suite de l'autre mais une fois toutes les combinaisons apparues une première fois.
+
+La tache étant relativement simple, répétitive au vu du nombre de cibles à cliquer pour un participant (360 cibles) et parfois frustrante au vu de la petite taille des cibles, nous nous attendons à un leger effet de fatigue exprimé par les participants.
+
+```{r}
+library(dplyr)
+library(ggplot2)
+
+data.bars3 <- dataClean %>%
+  group_by(userID,nbRepeat) %>%
+  summarise(mean.time = mean(as.numeric(time)), .groups = 'drop')
+
+g.bars3 <- ggplot(data = data.bars3, aes(x=userID, y = mean.time, fill=nbRepeat)) + geom_col(position = "dodge")
+
+g.bars3
+```
+
+Ce graphique nous indique par conséquent que chaque participant était plus performant sur la seconde répétition et qu'il semble par conséquent y avoir un effet d'apprentissage.
+
+Comparons maintenant les techniques entre elles
+
+Les 3 techniques étant "Normal", "Bubble" et "Rope" ont été soumises dans cet ordre au cours d'une répétition, ainsi nous pouvons garder en tête que les résultats obtenus auraient peut-être pu être légérement différents si l'ordre l'était. La transition d'une technique a une autre a peut-être un leger impact sur les résultats de performance.
+
+```{r}
+library(dplyr)
+library(ggplot2)
+
+data.bars4 <- dataClean %>%
+  group_by(technique) %>%
+  summarise(mean.time = mean(as.numeric(time)), .groups = 'drop')
+
+g.bars4 <- ggplot(data = data.bars4, aes(x=technique, y = mean.time)) + geom_col(position = "dodge")
+
+g.bars4
+```
+
+Ce graphique nous montre qu'en moyenne la technique donnant un temps de réponse moyen plus élevé est la technique avec un curseur "Normal", en effet cette technique requiert d'avantage de précision que les deux autres, nous nous attendions donc à ce résultat.
+D'autre part nous pouvons affirmer que le curseur "Rope" donne un temps de selection des cibles un peu plus court que pour la technique "Bubble".
+
+```{r}
+library(dplyr)
+library(ggplot2)
+
+data.bars <- dataClean %>%
+  group_by(userID,technique) %>%
+  summarise(mean.time = mean(as.numeric(time)), .groups = 'drop')
+
+g.bars <- ggplot(data = data.bars, aes(x=userID, y = mean.time, fill=technique)) + geom_col(position = "dodge")
+
+g.bars
+```
+
+Les résultats présentés au-dessus sont appuyés par ce graphique qui cette fois-ci observe les temps de réactions en fonction des techniques et des participants. Ainsi, nous remarquons que chaque participant présente le même classement de performance selon les techniques à savoir en premier le "Rope" puis le "Bubble" et enfin le "Normal"
+
+Qu'en est-il de l'influence de la densité des cibles sur le temps de selection ?
+
+Nous pouvons nous attendre à ce qu'une densité plus faible facilitent la selection de cible notamment sur les curseurs "Bubble" et "Rope" car il y aurait en théorie moins de cibles intermediaires qui forceraient le participant à se rapprocher d'autant plus de la cible à selectionner.
+
+```{r}
+library(dplyr)
+library(ggplot2)
+
+data.bars5 <- dataClean %>%
+  group_by(density) %>%
+  summarise(mean.time = mean(as.numeric(time)), .groups = 'drop')
+
+g.bars5 <- ggplot(data = data.bars5, aes(x=density, y = mean.time)) + geom_col(position = "dodge")
+
+g.bars5
+```
+
+Ces résultats nous permettent d'affirmer qu'une densité plus grande réduit le temps de séléction comme nous le pensions.
+
+```{r}
+library(dplyr)
+library(ggplot2)
+
+data.bars51 <- dataClean %>%
+  group_by(density,technique) %>%
+  summarise(mean.time = mean(as.numeric(time)), .groups = 'drop')
+
+g.bars51 <- ggplot(data = data.bars51, aes(x=density, y = mean.time, fill = technique)) + geom_col(position = "dodge")
+
+g.bars51
+```
+
+Lorsque l'on observe le temps de réaction en fonction de la densité mais aussi en fonction de la technique, nous pouvons dire que les résultats respectent nos attentes, c'est à dire que l'on observe une différence marquée pour les curseurs "Bubble" et "Rope" lorsque la densité augmente. Cette différence s'observe moindrement pour la technique "Normal" car un changement dans la densité des cibles ne change rien dans le comportement du curseur normal. Cela doit donc s'expliquer par le temps mis par les participants pour trouver la nouvelle cible à selectionner.
+
+Concernant la taille des cibles, nous nous attendons à ce que les cibles plus grandes soient plus faciles à selectionner
+
+```{r}
+library(dplyr)
+library(ggplot2)
+
+data.bars6 <- dataClean %>%
+  group_by(targetSize) %>%
+  summarise(mean.time = mean(as.numeric(time)), .groups = 'drop')
+
+g.bars6 <- ggplot(data = data.bars6, aes(x=targetSize, y = mean.time)) + geom_col(position = "dodge")
+
+g.bars6
+```
+
+Le graphique nous indique ici qu'en effet lorsque la taille des cibles augmente, le temps de selection diminue. Cela peut s'expliquer par le fait que la selection requiert donc moins précision (surtout pour le curseur "Normal") et également les cibles seraient plus faciles à reperer.
+
+Regardons désormais les impacts de la densité et de la taille des cibles mais en fonction de chaque technique
+
+```{r}
+library(dplyr)
+library(ggplot2)
+
+data.bars7 <- dataClean %>%
+  group_by(technique,density) %>%
+  summarise(mean.time = mean(as.numeric(time)), .groups = 'drop')
+
+g.bars7 <- ggplot(data = data.bars7, aes(x=technique, y = mean.time, fill=density)) + geom_col(position = "dodge")
+
+g.bars7
+```
+
+Ici, le graphique nous montre que comme attendu, il est plus facile de selectionner des cibles lorsque celles-ci sont moins nombreuses et ce pour chaque technique mais une chose interessante qui se démarque est que la différence de résultat entre les 2 densités est beaucoup plus faible pour la technique "Normal" et cela s'explique par le fait qu'augmenter la densité des cibles n'impacte pas directement le comportement du curseur mais seulement celui du participant
+
+```{r}
+library(dplyr)
+library(ggplot2)
+
+data.bars8 <- dataClean %>%
+  group_by(technique,targetSize) %>%
+  summarise(mean.time = mean(as.numeric(time)), .groups = 'drop')
+
+g.bars8 <- ggplot(data = data.bars8, aes(x=technique, y = mean.time, fill=targetSize)) + geom_col(position = "dodge")
+
+g.bars8
+```
+Les résultats pour les différentes tailles de cibles suivent nos attentes c'est à dire que les cibles sont plus rapidement selectionnées pour une taille plus grande qu'importe la technique utilisée, en revanche le fait d'observer les résultats en fonction des techniques utilisées ne semble pas nous donner plus d'indication
+
+## Conclusion
+
+Si nous rassemblons les analyses des graphiques précédents nous pouvons affirmer plusieurs choses :
+  - La technique "Normal" donne un temps de séléction plus long par rapport au "Bubble" et au "Rope", ce dernier est le plus performant
+  - Il est plus rapide de selectionner des cibles plus grandes
+  - Il est plus rapide de selectionner des cibles lorsqu'il y en a moins à l'écran.
+  
+Rappelons que nous avons produit ces graphiques uniquement depuis des données flitrées où il n'y avait pas d'erreurs et que ce facteur pourrait être interessant à analyser et à commenter, en effet une technique rapide pourrait peut-être avoir un taux d'erreurs elevé qui la rendrait beaucoup moins performante.
+
+Nous pouvons donc donner comme hypothèse qu'il est préférable d'utiliser un curseur "Rope" sur un nombre réduit de grandes cibles. 
+
+
+
